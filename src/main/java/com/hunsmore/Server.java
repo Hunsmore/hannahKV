@@ -77,12 +77,15 @@ public class Server {
         public void channelRead(ChannelHandlerContext ctx, Object msg) throws ExecutionException, InterruptedException {
             String command = (String) msg;
             Future<Object> future = commandDispatcher.dispatchAndRun(command);
-            String result = future.get().toString();
+            Object fs = future.get();
+            String result = fs.toString();
+            if (fs instanceof byte[]) {
+                result = new String((byte[]) fs, StandardCharsets.UTF_8);
+            }
             System.out.println(result);
             ByteBuf encoded = ctx.alloc().buffer(result.length());
             encoded.writeBytes(result.getBytes(StandardCharsets.UTF_8));
-            ctx.write(encoded);
-            ctx.flush();
+            ctx.writeAndFlush(encoded);
         }
 
         @Override

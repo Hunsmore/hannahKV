@@ -10,12 +10,15 @@ import lombok.extern.slf4j.Slf4j;
 
 import java.nio.charset.StandardCharsets;
 import java.util.Scanner;
+import java.util.concurrent.atomic.AtomicBoolean;
 
 /**
  * @author htf
  */
 @Slf4j
 public class ConsoleClient {
+    private static final String PROMPT = "hannah-kv> ";
+
     public static void main(String[] args) throws InterruptedException {
         //connecting to server
         EventLoopGroup workerGroup = new NioEventLoopGroup();
@@ -33,12 +36,27 @@ public class ConsoleClient {
             });
 
             // Start the client.
-            ChannelFuture f = b.connect("localhost", 8080).sync();
-//            ByteBuf encoded = ctx.alloc().buffer(result.length());
-//            encoded.writeBytes(result.getBytes(StandardCharsets.UTF_8));
-//            f.channel().writeAndFlush();
+            ChannelFuture f = b.connect("localhost", 8080);
+            System.out.print(PROMPT);
+            Scanner scanner = new Scanner(System.in);
+            while (true) {
+                String line = scanner.nextLine().trim();
+                if ("q".equals(line) || "quit".equals(line) || "exit".equals(line)) {
+                    System.out.println("bye!");
+                    break;
+                }
+
+                Channel channel = f.channel();
+                byte[] msg = line.getBytes(StandardCharsets.UTF_8);
+                ByteBuf encoded = channel.alloc().buffer(msg.length);
+                encoded.writeBytes(msg);
+                channel.writeAndFlush(encoded);
+                f.sync();
+            }
+
             // Wait until the connection is closed.
-            f.channel().closeFuture().sync();
+//            f.channel().closeFuture().sync();
+            f.channel().close();
         } finally {
             workerGroup.shutdownGracefully();
         }
@@ -48,7 +66,7 @@ public class ConsoleClient {
         private final int UTF8_BYTES = 2;
 
         @Override
-        public void channelRead(ChannelHandlerContext ctx, Object msg) {
+        public void channelRead(ChannelHandlerContext ctx, Object msg) throws InterruptedException {
             ByteBuf in = (ByteBuf) msg;
             if (in.readableBytes() < UTF8_BYTES) {
                 return;
@@ -62,6 +80,7 @@ public class ConsoleClient {
             } while (in.readableBytes() > UTF8_BYTES);
 
             System.out.println(stringBuilder);
+            System.out.print(PROMPT);
         }
 
         @Override
