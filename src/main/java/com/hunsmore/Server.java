@@ -31,7 +31,8 @@ public class Server {
             port = Integer.parseInt(args[0]);
         }
 
-        new Server(port).run(new CommandDispatcher(new DumbKeyValueServiceImpl()));
+//        new Server(port).run(new CommandDispatcher(new DumbKeyValueServiceImpl()));
+        new Server(port).run(new CommandDispatcher(new MemoryKeyValueServiceImpl()));
     }
 
     public void run(final CommandDispatcher commandDispatcher) throws Exception {
